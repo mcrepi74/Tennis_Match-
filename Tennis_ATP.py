@@ -6,6 +6,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pandas.io.parsers import read_csv
 import seaborn as sns
+from datetime import date, timedelta
 from sklearn.impute import SimpleImputer
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
@@ -15,7 +16,7 @@ import scipy
 # read in data
 df_all = pd.read_csv("ATP_tweaked.csv", parse_dates=['tourney_date'])
 
-# see the columns
+# see the columns'             
 df_all.columns
 
 features_match = ["tourney_id", "tourney_level", "surface", "tourney_date", "round", "best_of"]
@@ -25,7 +26,6 @@ features_player = [("p1_"+f) for f in features_player] + [("p2_"+f) for f in fea
 outcome = "p1_won"
 
 df_data = df_all[features_match + features_player + [outcome]].copy()
-display(df_data)
 
 min_match = 20
 times = pd.value_counts(df_data["p1_id"].tolist() + df_data["p2_id"].tolist())
@@ -36,7 +36,6 @@ keep = [r[1]["p1_id"] in ids and r[1]["p2_id"] in ids for r in df_data.iterrows(
 df_data = df_data.iloc[keep]
 print(len(df_data))
 
-display(df_data.isnull().mean(axis="rows").sort_values())
 
 # replacing missing entry feature with "unknown"
 df_data[["p1_entry", "p2_entry"]] = df_data[["p1_entry", "p2_entry"]].fillna("unknown")
@@ -63,7 +62,7 @@ df_data_mirror.rename(mapping, axis="columns", inplace=True)
 df_data_mirror["p1_won"] = 1 - df_data_mirror["p1_won"]
 
 # concatenate
-df_data = pd.concat((df_data, df_data_mirror), axis="rows").reset_index(drop=True)
+df_data = pd.concat((df_data, df_data_mirror), axis=0).reset_index(drop=True)
 
 # sort by the match date
 df_data.sort_values(by="tourney_date", inplace=True)
@@ -111,7 +110,6 @@ X = df_data.drop([outcome, "tourney_id", "p1_id", "p2_id"], axis="columns").set_
 # dummie coding of categorical variables
 X = pd.get_dummies(X, columns=["tourney_level","surface","round","p1_entry","p1_hand","p2_entry","p2_hand"])
 
-display(X)
 
 years = np.array([x.year for x in X.index])
 
