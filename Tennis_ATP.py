@@ -12,6 +12,7 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.inspection import permutation_importance
 from sklearn.metrics import roc_auc_score
 import scipy
+import scipy.stats
 
 # read in data
 df_all = pd.read_csv("ATP_tweaked.csv", parse_dates=['tourney_date'])
@@ -171,15 +172,19 @@ fig.tight_layout()
 importances = permutation_importance(model, Xvalidate, yvalidate, scoring="roc_auc", n_repeats=10, n_jobs=4, random_state=2022)
 
 # sort the features according to descending order of importance
-idx = np.argsort(importances["importances_mean"])[::-1]
-importances_mean = importances["importances_mean"][idx]
+# Convert importances["importances_mean"] to a NumPy array
+importances_mean = np.array(importances["importances_mean"])
+
+# Sort the features according to descending order of importance
+idx = np.argsort(importances_mean)[::-1]
 importances_std = importances["importances_std"][idx]
 feature_names = X.columns[idx]
+
 
 # plot the feature importances
 fig, ax = plt.subplots(1, 1, figsize=(15,6), dpi=90)
 ax.bar(feature_names, importances_mean, yerr=importances_std, width=0.6)
-ax.xaxis.set_ticks(np.arange(0, len(importances_mean)))
+ax.xaxis.set_ticks(list(np.arange(0, len(importances_mean))))
 ax.set_xticklabels(feature_names, rotation = 90)
 ax.grid(color="lightgray", lw=0.5)
 ax.set_title("Permutation feature importance")
@@ -198,8 +203,8 @@ features_keep = ["Δ_stat", "Δ_rank_points", "Δ_rank", "p1_stat", "p2_stat", "
 
 # concatenate train and validate data
 df_sns = pd.concat((
-    pd.concat((Xtrain[features_keep], Xvalidate[features_keep]), axis="rows").reset_index(drop=True), 
-    pd.concat((ytrain, yvalidate), axis="rows").reset_index(drop=True)
+    pd.concat((Xtrain[features_keep], Xvalidate[features_keep]), axis=0).reset_index(drop=True), 
+    pd.concat((ytrain, yvalidate), axis=0).reset_index(drop=True)
     ), axis="columns")
 
 # some of the features are highly skewed. For these ones we will use log scale
@@ -229,7 +234,7 @@ features_keep = ["Δ_stat", "Δ_rank_points", "Δ_rank", "p1_stat", "p2_stat", "
 model = RandomForestClassifier(n_estimators=1024, criterion="gini", min_samples_split=16, n_jobs=4, random_state=2022)
 
 # fit model
-model.fit(pd.concat((Xtrain[features_keep], Xvalidate[features_keep]), axis="rows"), pd.concat((ytrain, yvalidate), axis="rows"))
+model.fit(pd.concat((Xtrain[features_keep], Xvalidate[features_keep]), axis=0), pd.concat((ytrain, yvalidate), axis=0))
 
 # predict on the validate data
 yscore = model.predict_proba(Xtest[features_keep])[:,1]
