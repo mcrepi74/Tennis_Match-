@@ -68,7 +68,7 @@ df_data = pd.concat((df_data, df_data_mirror), axis=0).reset_index(drop=True)
 # sort by the match date
 df_data.sort_values(by="tourney_date", inplace=True)
 
-def match_statistics(player_id: str, until_date: datetime.date, Δ_days: int, min_match: int=5) -> float:
+def match_statistics(player_id: str, until_date: date, Δ_days: int, min_match: int=5) -> float:
     """Calculate the recent match winning rate of a player over a past time period
     
     Args:
@@ -79,9 +79,21 @@ def match_statistics(player_id: str, until_date: datetime.date, Δ_days: int, mi
 
     Returns: the winning rate (0 to 1) of won matches
     """
-    df_player = df_data.loc[df_data["p1_id"] == player_id]
-    diff = (until_date - df_player["tourney_date"]).dt.days
-    df_player = df_player.loc[(0 < diff) & (diff <= Δ_days)]
+    df_player = df_data[df_data["p1_id"] == player_id].copy()  # Make a copy to avoid modifying the original data
+    
+    df_player["tourney_date"] = pd.to_datetime(df_player["tourney_date"])  # Convert to datetime format
+    
+    # Convert "until_date" to Timestamp or datetime
+    until_date_timestamp = pd.Timestamp(until_date)
+    
+    # Convert "until_date" to a Series of Timestamp
+    until_date_series = pd.Series([until_date_timestamp] * len(df_player))
+    
+    # Vectorized subtraction
+    diff = (until_date_series - df_player["tourney_date"]).dt.days
+    
+    df_player = df_player[(0 < diff) & (diff <= Δ_days)]
+    
     if len(df_player) > min_match:
         return df_player["p1_won"].mean()
     else:
